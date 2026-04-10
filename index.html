@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bus Reservation System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="module" src="https://unpkg.com/@splinetool/viewer/build/spline-viewer.js"></script>
+</head>
+<body>
+  <div class="bg-layer"></div>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <h1>Bus Reservation System</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="system-status-pill"><div class="dot active"></div> Status: <span>Online</span></div>
+        <div id="cloudSyncPill" class="cloud-sync-pill cloud-sync-idle hidden">Cloud Sync: Offline</div>
+        <div id="userPill" class="user-pill hidden"></div>
+      </div>
+    </header>
+
+    <section id="authPanel" class="auth-layout">
+      <div class="auth-spline-section">
+        <div class="spline-title-overlay">
+          <h1 id="splineTitleText" class="gradient-text">Welcome Back.</h1>
+        </div>
+        <spline-viewer url="./scene.splinecode" events-target="global"></spline-viewer>
+        <div class="spline-overlay"></div>
+      </div>
+      <div class="auth-form-section">
+        
+        <div class="auth-ornament-header">
+          <div class="badge"><div class="dot"></div> Secure Connection</div>
+          <h2>Authentication</h2>
+          <p id="authHeaderSubtitle">Please provide your authorized credentials to access the management interface.</p>
+        </div>
+
+        <article class="auth-card">
+          <h2>Welcome</h2>
+          <div class="auth-switch">
+            <button type="button" id="authLoginTabBtn" class="tab-btn active">Sign In</button>
+            <button type="button" id="authSignupTabBtn" class="tab-btn">Create Account</button>
+          </div>
+          <div id="authLoginPane">
+            <form id="loginForm" class="mini-form auth-single-form">
+              <label>Email<input id="loginEmail" type="email" required></label>
+              <label>Password<input id="loginPassword" type="password" required></label>
+              <button type="submit">Login</button>
+            </form>
+          </div>
+          <div id="authSignupPane" class="hidden">
+            <form id="signupForm" class="mini-form auth-single-form">
+              <label>Name<input id="signupName" type="text" required></label>
+              <label>Email<input id="signupEmail" type="email" required></label>
+              <label>Password<input id="signupPassword" type="password" minlength="6" required></label>
+              <button type="submit">Create Account</button>
+            </form>
+          </div>
+        </article>
+
+
+
+      </div>
+    </section>
+
+    <section id="appPanel" class="hidden app-layout">
+      <nav class="top-nav card">
+        <div class="tab-row nav-inline">
+          <button class="tab-btn active" data-tab="bookingTab">Book</button>
+          <button class="tab-btn" data-tab="ticketsTab">Tickets</button>
+          <button class="tab-btn hidden" data-tab="adminTab" id="adminTabBtn">Admin</button>
+          <button class="tab-btn" data-tab="terminalTab">Terminal</button>
+          <button class="tab-btn" data-tab="profileTab">Profile</button>
+        </div>
+        <button id="logoutBtn" class="danger-lite">Logout</button>
+      </nav>
+
+      <section class="content-area">
+        <section id="bookingTab" class="tab active">
+          <div class="booking-shell sidebar-open">
+            <article class="booking-col booking-left">
+              <h2>Reservation</h2>
+              <label>Route<select id="routeSelect"></select></label>
+              <label>Bus Service<select id="busSelect"></select></label>
+              <label>Travel Date<input id="travelDate" type="date" required></label>
+              <label>Boarding Point<select id="boardingStopSelect"></select></label>
+              <label>Dropping Point<select id="droppingStopSelect"></select></label>
+              <div id="farePreview" class="meta-box"></div>
+
+            </article>
+
+            <article class="booking-col booking-middle">
+              <div class="map-head">
+                <h2>Route Map</h2>
+              </div>
+              <div class="hidden"><select id="mapRouteSelect"></select></div>
+              <div id="mapView"></div>
+            </article>
+
+            <button id="sidebarToggle" class="sidebar-toggle" title="Toggle Seat Layout">
+              <span class="toggle-icon">❮</span>
+            </button>
+
+            <article class="booking-col booking-right">
+              <h2>Seat Layout</h2>
+              <div class="seat-legend">
+                <span class="legend-item"><i class="legend-dot legend-open"></i> Available</span>
+                <span class="legend-item"><i class="legend-dot legend-held"></i> Selected</span>
+                <span class="legend-item"><i class="legend-dot legend-temp"></i> Temporarily Held</span>
+                <span class="legend-item"><i class="legend-dot legend-locked"></i> Reserved</span>
+              </div>
+              <div id="seatStatusSummary" class="seat-status-summary"></div>
+              <div class="occupancy-wrap">
+                <div id="seatOccupancyFill" class="occupancy-fill"></div>
+              </div>
+              <div id="seatHoldTimer" class="seat-hold-timer"></div>
+              <div id="seatMap" class="seat-map"></div>
+
+              <form id="bookForm" class="mini-form">
+                <button type="submit">Confirm Booking</button>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section id="ticketsTab" class="tab">
+          <h2>My Tickets</h2>
+          <div class="search-row">
+            <input id="ticketSearchInput" type="text" placeholder="Search Ticket ID">
+            <select id="ticketSortSelect" aria-label="Sort tickets">
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+          <div id="myTicketsList" class="list-grid scroll-y"></div>
+        </section>
+
+        <section id="adminTab" class="tab">
+          <h2>Admin Dashboard</h2>
+          <div class="admin-nav">
+            <button type="button" class="admin-nav-btn active" data-admin-panel="adminTicketsPanel">Tickets</button>
+            <button type="button" class="admin-nav-btn" data-admin-panel="adminRoutesPanel">Routes</button>
+            <button type="button" class="admin-nav-btn" data-admin-panel="adminBusesPanel">Buses</button>
+            <button type="button" class="admin-nav-btn" data-admin-panel="adminStopsPanel">Stops</button>
+            <button type="button" class="admin-nav-btn" data-admin-panel="adminPassengersPanel">Passengers</button>
+            <button type="button" class="admin-nav-btn" data-admin-panel="adminReportsPanel">Reports</button>
+          </div>
+
+          <div id="adminTicketsPanel" class="admin-panel active">
+            <div class="sub-card">
+              <h3>Booked Tickets</h3>
+              <div class="search-row">
+                <input id="adminTicketLiveSearch" type="text" placeholder="Live search by Ticket ID, name, route, bus, seat">
+                <button id="adminPurgeCancelledBtn" type="button" class="danger-lite">Clear All Cancelled</button>
+              </div>
+              <div id="adminTicketsMeta" class="meta-box"></div>
+              <div id="adminTicketsList" class="list-grid scroll-y"></div>
+            </div>
+          </div>
+
+          <div id="adminRoutesPanel" class="admin-panel">
+            <div class="sub-card">
+              <h3>Route Editor</h3>
+              <div class="inline-actions">
+                <label>Select Route<select id="adminRoutePick"></select></label>
+              </div>
+              <form id="routeForm" class="mini-form">
+                <input id="adminRouteId" type="hidden" required readonly>
+                <label>Route Ref<input id="adminRouteRef" required></label>
+                <label>Fare<input id="adminRouteFare" type="number" min="1" required></label>
+                <button type="submit">Save Route</button>
+              </form>
+            </div>
+          </div>
+
+          <div id="adminBusesPanel" class="admin-panel">
+            <div class="sub-card">
+              <div class="panel-head">
+                <h3>Bus Editor</h3>
+                <button id="adminBusNewBtn" type="button">Add New Bus</button>
+              </div>
+              <label>Route<select id="adminBusRouteSelect"></select></label>
+              <div class="inline-actions">
+                <label>Select Bus<select id="adminBusPick"></select></label>
+                <button id="deleteBusBtn" type="button" class="danger-lite">Delete Bus</button>
+              </div>
+              <form id="busForm" class="mini-form">
+                <input id="adminBusId" type="hidden">
+                <label>Bus Code<input id="adminBusCode" required></label>
+                <label>Departure Time<input id="adminBusTime" type="time" step="60" required></label>
+                <button type="submit">Save Bus</button>
+              </form>
+            </div>
+          </div>
+
+          <div id="adminStopsPanel" class="admin-panel">
+            <div class="sub-card">
+              <h3>Stop Editor</h3>
+              <label>Route<select id="adminStopRouteSelect"></select></label>
+              <div class="inline-actions">
+                <label>Select Stop<select id="adminStopPick"></select></label>
+              </div>
+              <form id="stopForm" class="mini-form">
+                <input id="adminStopId" type="hidden" readonly>
+                <label>Edit Stop Name<input id="adminStopName" required></label>
+                <button type="submit">Save Stop</button>
+              </form>
+            </div>
+          </div>
+
+          <div id="adminPassengersPanel" class="admin-panel">
+            <div class="sub-card">
+              <h3>Bus Passenger Details</h3>
+              <div class="search-row">
+                <label>Route<select id="adminPassengerRoute"></select></label>
+                <label>Service<select id="adminPassengerBus"></select></label>
+                <label>Travel Date<input id="adminPassengerDate" type="date"></label>
+                <button id="adminPassengerExportBtn" type="button" class="danger-lite">Export CSV</button>
+              </div>
+              <div id="adminPassengerMeta" class="meta-box"></div>
+              <div id="adminPassengerList" class="list-grid scroll-y"></div>
+            </div>
+          </div>
+
+          <div id="adminReportsPanel" class="admin-panel">
+            <div class="sub-card">
+              <h3>Unified Operational Report</h3>
+              <div id="unifiedReportBox" class="meta-box"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="terminalTab" class="tab">
+          <div class="panel-head">
+            <h2>Terminal</h2>
+            <form id="terminalForm" class="inline-actions">
+              <input id="terminalInput" type="text" placeholder="Try: routes" autocomplete="off">
+              <button id="terminalRunBtn" type="submit">Run</button>
+            </form>
+          </div>
+          <pre id="terminalOutput" class="terminal scroll-y"></pre>
+        </section>
+
+        <section id="profileTab" class="tab">
+          <h2>Profile</h2>
+          <form id="profileForm" class="inline-profile">
+            <label>Name<input id="profileName" required></label>
+            <button type="submit">Update Name</button>
+          </form>
+          <form id="passwordForm" class="inline-profile">
+            <label>New Password<input id="newPassword" type="password" minlength="6" required></label>
+            <button type="submit">Change Password</button>
+          </form>
+        </section>
+
+      </section>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalBody"></p>
+      <input id="modalInput" class="hidden" />
+      <div class="modal-actions">
+        <button id="modalCancelBtn" class="danger-lite">Cancel</button>
+        <button id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mapPickerModal" class="modal hidden">
+    <div class="modal-card map-picker-card">
+      <h3 id="mapPickerTitle">Choose Map Point</h3>
+      <p id="mapPickerHint">Click on map to choose latitude and longitude.</p>
+      <div id="mapPickerView"></div>
+      <div class="meta-box" id="mapPickerCoords">Selected: not set</div>
+      <div class="modal-actions">
+        <button id="mapPickerCancelBtn" class="danger-lite">Cancel</button>
+        <button id="mapPickerConfirmBtn">Use Point</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addBusModal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Add New Bus</h3>
+      <form id="addBusForm" class="mini-form modal-form">
+        <label>Route<select id="addBusRouteSelect" required></select></label>
+        <label>Bus Code<input id="addBusCode" required></label>
+        <label>Departure Time<input id="addBusTime" type="time" step="60" required></label>
+        <div class="modal-actions">
+          <button id="addBusCancelBtn" type="button" class="danger-lite">Cancel</button>
+          <button id="addBusSaveBtn" type="submit">Create Bus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="cinematicLoader">
+    <div class="loader-content">
+      <div class="loader-title">LOADING WEBSITE</div>
+      <div class="loader-bar-wrap">
+        <div class="loader-bar" id="cinematicBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const authPanel = document.getElementById('authPanel');
+      const spline = document.querySelector('spline-viewer');
+      const cLoader = document.getElementById('cinematicLoader');
+      const cBar = document.getElementById('cinematicBar');
+      
+      if (authPanel && spline && cLoader) {
+        let loaded = false;
+        let p = 0;
+        
+        // Fast dynamic loading bar animation
+        const int = setInterval(() => {
+          if (p < 95) {
+             p += 15 + Math.random() * 25;
+             if (p > 95) p = 95;
+             cBar.style.width = p + '%';
+          }
+        }, 80);
+
+        const reveal = () => {
+          if (!loaded) {
+            loaded = true;
+            clearInterval(int);
+            cBar.style.width = '100%';
+            
+            setTimeout(() => {
+              cLoader.style.opacity = '0';
+              cLoader.style.visibility = 'hidden';
+              authPanel.classList.add('ready');
+            }, 300); 
+          }
+        };
+        
+        spline.addEventListener('load', reveal);
+        // We can safely drop this to 800ms since the file is 100% local and has zero download time!
+        setTimeout(reveal, 800); 
+      }
+    });
+  </script>
+
+  <script type="module" src="./app.js?v=2026-04-07-20"></script>
+</body>
+</html>
